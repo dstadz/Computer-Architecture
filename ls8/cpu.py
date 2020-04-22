@@ -3,9 +3,10 @@
 import sys
 
 
-HLT = 1
-LDI = 130
-PRN = 71
+LDI = 0b10000010
+PRN = 0b01000111
+HLT = 0b00000001
+MUL = 0b10100010
 
 class CPU:
     """Main CPU class."""
@@ -17,11 +18,23 @@ class CPU:
         self.ram = [0] * 256
 
     def load(self, filename):
-        """Load a program into memory."""
-
+        address = 0
+        try:
+            address = 0
+            with open(sys.argv[1]) as f:
+                for line in f:
+                    comment_split = line.strip().split("#")
+                    value = comment_split[0].strip()
+                    if value == "":
+                        continue
+                    instruction = int(value, 2)
+                    self.ram[address] = instruction
+                    address += 1
+        except:
+            print("cant find file")
+            sys.exit(2)
         address = 0
 
-        # For now, we've just hardcoded a program:
 
         program = [
             # From print8.ls8
@@ -33,17 +46,14 @@ class CPU:
             0b00000001, # HLT
         ]
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
-
-
     def alu(self, op, reg_a, reg_b):
-        """ALU operations."""
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        elif op == "SUB":
+            self.reg[reg_a] -= self.reg[reg_b]
+        elif op == MUL:
+            self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -72,26 +82,22 @@ class CPU:
     def ram_write(self, address, value):
         self.ram[address] = value
     def run(self):
-        """Run the CPU."""
-        self.load()
 
         while True:
-            # needs to read mem address stores in register PC and store in IR - local variable
-            IR = self.ram_read(self.pc)
-            # read the bytes at `PC+1` and `PC+2` from RAM into variables `operand_a` and `operand_b` in case the instruction needs them
+            IR = self.ram[self.pc]
             operand_a = self.ram_read(self.pc + 1)
             operand_b = self.ram_read(self.pc + 2)
-            # Then, depending on the value of the opcode, perform the actions needed for the instruction per the LS-8 spec. Maybe an `if-elif` cascade...? There are other options, too
-
             if IR == HLT:
-                print("Exit")
                 break
             elif IR == PRN:
-                data = self.ram[self.pc + 1]
-                print(self.reg[data])
+                print(self.reg[operand_a])
                 self.pc += 2
             elif IR == LDI:
                 self.reg[operand_a] = operand_b
                 self.pc += 3
+            elif IR == MUL:
+                self.alu(IR, operand_a, operand_b)
+                self.pc += 3
             else:
                 print("Error")
+                exit()
