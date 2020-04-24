@@ -30,7 +30,7 @@ class CPU:
         self.pc = 0
         self.ram = [0] * 256
         self.reg = [0] * 8
-        self.efl = 0
+        self.efl = 0b00000000
         self.reg[sp] = 0xF4
 
         self.operand_a = None
@@ -42,7 +42,6 @@ class CPU:
             'JNE': self.JNE,
             'LDI': self.LDI,
             'PRN': self.PRN,
-            # 'RET': self.RET,
         }
 
     def load(self, filename):
@@ -69,13 +68,11 @@ class CPU:
             self.reg[reg_a] *= self.reg[reg_b]
         elif op == math_op["CMP"]:
             if self.reg[self.operand_a] == self.reg[self.operand_b]:
-                self.FL = 0b00000001
-
+                self.efl = 0b00000001
             if self.reg[self.operand_a] < self.reg[self.operand_b]:
-                self.FL = 0b00000100
-
+                self.elf = 0b00000100
             if self.reg[self.operand_a] > self.reg[self.operand_b]:
-                self.FL = 0b00000010
+                self.elf = 0b00000010
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -102,21 +99,22 @@ class CPU:
 
 
     def JMP(self):
-        print("JMP")
         address = self.reg[self.operand_a]
         self.pc = address
 
     def JEQ(self):
-        print("JEQ")
+        print('jeq')
         if self.efl == 1:
             self.pc = self.reg[self.operand_a]
         else:
             self.pc += 2
 
     def JNE(self):
-        print("JNE")
+        print('jne')
         if self.efl == 0:
             self.pc = self.reg[self.operand_a]
+        else:
+            self.pc += 2
 
     def HLT(self):
         sys.exit()
@@ -124,7 +122,7 @@ class CPU:
         print(self.reg[self.operand_a])
 
     def LDI(self):
-        print('LDI')
+        print('ldi')
         self.reg[self.operand_a] = self.operand_b
 
     def move_pc(self, IR):
@@ -148,7 +146,3 @@ class CPU:
 
             else:
                 sys.exit(1)
-
-# cpu = CPU()
-# cpu.load('./examples/sctest.ls8')
-# cpu.run()
