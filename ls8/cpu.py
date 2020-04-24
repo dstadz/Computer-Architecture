@@ -2,54 +2,85 @@
 
 import sys
 
-class CPU:
-    """Main CPU class."""
+bin_op = {
+    0b00000001: 'HLT',
+    0b10000010: 'LDI',
+    0b01000111: 'PRN',
+    0b01000101: 'PUSH',
+    0b01000110: 'POP',
+    0b01010000: 'CALL',
+    0b00010001: 'RET',
+    0b01010100: 'JMP',
+    0b01010101: 'JEQ',
+    0b01010110: 'JNE'
+}
 
+math_op = {
+    "ADD": 0b10100000,
+    "SUB": 0b10100001,
+    "MUL": 0b10100010,
+    'CMP': 0b10100111
+}
+
+
+sp = 7 #stackpointer
+class CPU:
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.pc = 0
+        self.ram = [0] * 256
+        self.reg = [0] * 8
+        self.efl = 0b00000000
+        self.reg[sp] = 0xF4
 
-    def load(self):
-        """Load a program into memory."""
+        self.operand_a = None
+        self.operand_b = None
+        self.branchtable = {
+            'HLT': self.HLT,
+            'JMP': self.JMP,
+            'JEQ': self.JEQ,
+            'JNE': self.JNE,
+            'LDI': self.LDI,
+            'PRN': self.PRN,
+        }
 
+    def load(self, filename):
         address = 0
-
-        # For now, we've just hardcoded a program:
-
-        program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
-        ]
-
-        for instruction in program:
+        # try:
+        f = open(filename)
+        for line in f:
+            comment_split = line.strip().split("#")
+            value = comment_split[0].strip()
+            if value == "":
+                continue
+            instruction = int(value, 2)
             self.ram[address] = instruction
             address += 1
 
+        address = 0
 
-    def alu(self, op, reg_a, reg_b):
-        """ALU operations."""
-
+    def ALU(self, op, reg_a, reg_b):
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        elif op == "SUB":
+            self.reg[reg_a] -= self.reg[reg_b]
+        elif op == "MUL":
+            self.reg[reg_a] *= self.reg[reg_b]
+        elif op == math_op["CMP"]:
+            if self.reg[self.operand_a] == self.reg[self.operand_b]:
+                self.efl = 0b00000001
+            if self.reg[self.operand_a] < self.reg[self.operand_b]:
+                self.elf = 0b00000100
+            if self.reg[self.operand_a] > self.reg[self.operand_b]:
+                self.elf = 0b00000010
         else:
             raise Exception("Unsupported ALU operation")
 
     def trace(self):
-        """
-        Handy function to print out the CPU state. You might want to call this
-        from run() if you need help debugging.
-        """
-
         print(f"TRACE: %02X | %02X %02X %02X |" % (
             self.pc,
-            #self.fl,
-            #self.ie,
+            # self.fl,
+            # self.ie,
             self.ram_read(self.pc),
             self.ram_read(self.pc + 1),
             self.ram_read(self.pc + 2)
@@ -60,6 +91,58 @@ class CPU:
 
         print()
 
+    def ram_read(self, address):
+        return self.ram[address]
+
+    def ram_write(self, address, value):
+        self.ram[address] = value
+
+
+    def JMP(self):
+        address = self.reg[self.operand_a]
+        self.pc = address
+
+    def JEQ(self):
+        print('jeq')
+        if self.efl == 1:
+            self.pc = self.reg[self.operand_a]
+        else:
+            self.pc += 2
+
+    def JNE(self):
+        print('jne')
+        if self.efl == 0:
+            self.pc = self.reg[self.operand_a]
+        else:
+            self.pc += 2
+
+    def HLT(self):
+        sys.exit()
+    def PRN(self):
+        print(self.reg[self.operand_a])
+
+    def LDI(self):
+        print('ldi')
+        self.reg[self.operand_a] = self.operand_b
+
+    def move_pc(self, IR):
+        #incremnt pc if not set by instruction
+        if (IR << 3) % 255 >> 7 != 1:
+            self.pc += (IR >> 6) + 1
+
     def run(self):
         """Run the CPU."""
-        pass
+        while True:
+            IR = self.ram_read(self.pc)
+
+            self.operand_a = self.ram_read(self.pc + 1)
+            self.operand_b = self.ram_read(self.pc + 2)
+            if (IR << 2) % 255 >> 7 == 1: #math op check
+                self.ALU(IR, self.operand_a, self.operand_b)
+                self.move_pc(IR)
+            elif (IR << 2) % 255 >> 7 == 0:
+                self.branchtable[bin_op[IR]]()
+                self.move_pc(IR)
+
+            else:
+                sys.exit(1)
