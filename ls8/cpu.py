@@ -32,23 +32,17 @@ class CPU:
         self.reg = [0] * 8
         self.efl = 0
         self.reg[sp] = 0xF4
-        self.MAR = None
-        self.MDR = None
 
         self.operand_a = None
         self.operand_b = None
         self.branchtable = {
-            'CALL': self.CALL,
-            'CMP': self.CMP,
             'HLT': self.HLT,
             'JMP': self.JMP,
             'JEQ': self.JEQ,
             'JNE': self.JNE,
             'LDI': self.LDI,
             'PRN': self.PRN,
-            # 'PUSH': self.PUSH,
-            # 'POP': self.POP,
-            'RET': self.RET,
+            # 'RET': self.RET,
         }
 
     def load(self, filename):
@@ -63,13 +57,10 @@ class CPU:
             instruction = int(value, 2)
             self.ram[address] = instruction
             address += 1
-        # except:
-        #     print("cant find file")
-        #     sys.exit(2)
+
         address = 0
 
     def ALU(self, op, reg_a, reg_b):
-
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
         elif op == "SUB":
@@ -77,18 +68,14 @@ class CPU:
         elif op == "MUL":
             self.reg[reg_a] *= self.reg[reg_b]
         elif op == math_op["CMP"]:
-                    """Compare the values in two registers."""
-                    valueA = self.reg[self.operand_a]
-                    valueB = self.reg[self.operand_b]
+            if self.reg[self.operand_a] == self.reg[self.operand_b]:
+                self.FL = 0b00000001
 
-                    if valueA == valueB:
-                        self.FL = 0b00000001
+            if self.reg[self.operand_a] < self.reg[self.operand_b]:
+                self.FL = 0b00000100
 
-                    if valueA < valueB:
-                        self.FL = 0b00000100
-
-                    if valueA > valueB:
-                        self.FL = 0b00000010
+            if self.reg[self.operand_a] > self.reg[self.operand_b]:
+                self.FL = 0b00000010
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -112,21 +99,8 @@ class CPU:
 
     def ram_write(self, address, value):
         self.ram[address] = value
-    def CALL(self):
-        self.reg[sp] -=1
-        self.ram[self.reg[sp]] = self.pc +2
-        self.pc = self.reg[self.operand_a]
 
-    def RET(self):
-        self.pc = self.ram[self.reg[sp]]
-        self.reg[sp] += 1
-    def CMP(self):
-        if self.reg[self.operand_a] == self.reg[self.operand_b]:
-            self.efl = 0b00000001
-        if self.reg[self.operand_a] < self.reg[self.operand_b]:
-            self.efl = 0b00000100
-        if self.reg[self.operand_a] > self.reg[self.operand_b]:
-            self.efl = 0b00000010
+
     def JMP(self):
         print("JMP")
         address = self.reg[self.operand_a]
@@ -141,7 +115,6 @@ class CPU:
 
     def JNE(self):
         print("JNE")
-
         if self.efl == 0:
             self.pc = self.reg[self.operand_a]
 
@@ -150,15 +123,6 @@ class CPU:
     def PRN(self):
         print(self.reg[self.operand_a])
 
-    # def PUSH (self):
-    #     global sp
-    #     self.reg[sp] -= 1
-    #     self.ram[self.reg[pc]] = self.reg[self.operand_a]
-
-    # def POP(self):
-    #     global sp
-    #     self.reg[self.operand_a] = self.ram[self.reg[sp]]
-    #     self.reg[sp] += 1
     def LDI(self):
         print('LDI')
         self.reg[self.operand_a] = self.operand_b
