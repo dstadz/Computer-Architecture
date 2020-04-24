@@ -208,7 +208,7 @@ second argument:
 x = int("1010101", 2)  # Convert binary string to integer
 ```
 
-## Step 8: Implement a Multiply and Print the Result
+## Step 8: Implement a Multiply and Print the Result  
 
 Extend your LS8 emulator to support the following program:
 
